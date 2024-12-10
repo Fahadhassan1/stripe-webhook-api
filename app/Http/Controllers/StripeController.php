@@ -116,4 +116,40 @@ class StripeController extends Controller
         }
     }
 
+
+    public function createLoginLink(Request $request,$accountId)
+    {
+        try {
+
+            // Validate the account ID from the route parameter
+            if (empty($accountId)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Stripe Account ID is required.',
+                ], 400);
+            }
+
+
+            $loginLink = $this->stripeService->createLoginLink($accountId);
+
+            if ($loginLink) {
+                return response()->json([
+                    'success' => true,
+                    'login_link' => $loginLink,
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to create login link. Please try again.',
+            ], 500);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], $e->getCode() ?: 500);
+        }
+    }
+
 }

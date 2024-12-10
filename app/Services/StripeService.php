@@ -69,4 +69,22 @@ class StripeService
 
         $account->delete();
     }
+
+    /**
+     * Create a login link for a connected account.
+     *
+     * @param string $connectedAccountId
+     * @return string|null
+     */
+    public function createLoginLink(string $connectedAccountId): ?string
+    {
+        try {
+            $loginLink = Account::createLoginLink($connectedAccountId);
+            return $loginLink->url;
+        } catch (\Exception $e) {
+            // Log or handle errors as needed
+            \Log::error('Stripe Login Link Error: ' . $e->getMessage());
+            return null;
+        }
+    }
 }

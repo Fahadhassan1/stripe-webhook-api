@@ -26,4 +26,6 @@ Route::resource('posts', PostController::class);
 Route::post('/stripe/redirect', [StripeController::class, 'redirectToStripe']);
 Route::get('/stripe/connect/callback/{stripe_account_id}', [StripeController::class,'handleStripeCallback']);
 Route::delete('/stripe/delete/{stripe_account_id}', [StripeController::class,'deleteStripeConnectAccount']);
+Route::get('/stripe/express/login-link/{stripe_account_id}', [StripeController::class, 'createLoginLink']);
+
 
