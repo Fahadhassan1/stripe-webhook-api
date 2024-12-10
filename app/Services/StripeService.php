@@ -16,7 +16,7 @@ class StripeService
     public function createAccount($user)
     {
         return Account::create([
-            'type' => 'custom',
+            'type' => 'express',
             'country' => 'GB',
             'email' => $user->email,
             'business_type' => 'individual',
@@ -39,5 +39,34 @@ class StripeService
             'return_url' => env('STRIPE_REDIRECT_URL') . '/' . $accountId,
             'type' => 'account_onboarding',
         ]);
+    }
+
+    public function handleStripeCallback($accountId, $user)
+    {
+        if (!$user) {
+            throw new \Exception('Unauthorized access', 401);
+        }
+
+        if (!$accountId) {
+            throw new \Exception('Stripe Account ID not found. Please contact support.', 400);
+        }
+
+        // Logic to save Stripe Connected and Stripe Connect ID in the database
+        $user->isStripeConnected = 1;
+        $user->stripe_account_id = $accountId;
+        $user->save();
+
+        return 'Stripe Account Connected Successfully';
+    }
+
+    public function deleteStripeAccount($stripeAccountId)
+    {
+        $account = Account::retrieve($stripeAccountId);
+
+        if (!$account) {
+            throw new \Exception('Stripe Account ID not found. Please contact the Support Team.', 400);
+        }
+
+        $account->delete();
     }
 }

@@ -23,4 +23,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::resource('posts', PostController::class);
 
-Route::middleware('auth:api')->post('/stripe/redirect', [StripeController::class, 'redirectToStripe']);
+Route::post('/stripe/redirect', [StripeController::class, 'redirectToStripe']);
+Route::get('/stripe/connect/callback/{stripe_account_id}', [StripeController::class,'handleStripeCallback']);
+Route::delete('/stripe/delete/{stripe_account_id}', [StripeController::class,'deleteStripeConnectAccount']);
+
