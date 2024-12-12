@@ -221,4 +221,31 @@ class StripeService
             ];
         }
     }
+
+
+    /**
+     * Cancel a payment intent.
+     *
+     * @param string $paymentIntentId
+     * @return array
+     */
+    public function cancelPayment(string $paymentIntentId): array
+    {
+        try {
+            $paymentIntent = paymentIntent::retrieve($paymentIntentId);
+            // Now cancel the PaymentIntent
+            $paymentIntent->cancel();
+
+            return [
+                'success' => true,
+                'payment_intent' => $paymentIntent,
+            ];
+        } catch (\Exception $e) {
+            \Log::error('Stripe Cancel Error: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
 }

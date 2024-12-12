@@ -30,6 +30,8 @@ Route::delete('/stripe/delete/{stripe_account_id}', [StripeController::class,'de
 Route::get('/stripe/express/login-link/{stripe_account_id}', [StripeController::class, 'createLoginLink']);
 Route::post('/stripe/charge-client', [StripeController::class, 'chargeClient']);
 Route::post('/stripe/capture-payment', [StripeController::class, 'capturePayment']);
+Route::post('/stripe/cancel-payment', [StripeController::class, 'cancelPayment']);
+
 
 
 // Stripe WebHook

@@ -239,4 +239,32 @@ class StripeController extends Controller
 
     }
 
+
+    /**
+     * Cancel a payment.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function cancelPayment(Request $request)
+    {
+        $validated = $request->validate([
+            'payment_intent_id' => 'required|string',
+        ]);
+
+        $result = $this->stripeService->cancelPayment($validated['payment_intent_id']);
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'payment_intent' => $result['payment_intent'],
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'error' => $result['error'],
+        ], 500);
+    }
+
 }
