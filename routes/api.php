@@ -23,9 +23,16 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::resource('posts', PostController::class);
 
+// Stripe API
 Route::post('/stripe/redirect', [StripeController::class, 'redirectToStripe']);
 Route::get('/stripe/connect/callback/{stripe_account_id}', [StripeController::class,'handleStripeCallback']);
 Route::delete('/stripe/delete/{stripe_account_id}', [StripeController::class,'deleteStripeConnectAccount']);
 Route::get('/stripe/express/login-link/{stripe_account_id}', [StripeController::class, 'createLoginLink']);
+Route::post('/stripe/charge-client', [StripeController::class, 'chargeClient']);
+Route::post('/stripe/capture-payment', [StripeController::class, 'capturePayment']);
+
+
+// Stripe WebHook
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhooks']);
 
 

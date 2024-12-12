@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\StripeService;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
+
 
 
 class StripeController extends Controller
@@ -150,6 +152,91 @@ class StripeController extends Controller
                 'message' => $e->getMessage()
             ], $e->getCode() ?: 500);
         }
+    }
+
+
+    public function chargeClient(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'amount' => 'required|numeric|min:0.5',
+                'currency' => 'required|string|max:3',
+                'payment_method_id' => 'required|string',
+                'customer_id' => 'nullable|string',
+                'destination' => 'required|string',
+                'email' => 'nullable|email',
+                'name' => 'nullable|string',
+                'description' => 'nullable|string',
+            ]);
+
+            $result = $this->stripeService->chargeClient(
+                $validated['amount'],
+                $validated['currency'],
+                $validated['payment_method_id'],
+                $validated['destination'],
+                $validated['customer_id'] ?? null,
+                0.5, // Fee percentage
+                $validated['email'] ?? null,
+                $validated['name'] ?? null,
+                $validated['description'] ?? null
+            );
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'payment_intent' => $result['payment_intent'],
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'],
+            ], 500);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->validator->errors(),
+            ], $e->getCode() ?: 500);
+        }
+    }
+
+
+
+
+    /**
+     * Capture a payment.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function capturePayment(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'payment_intent_id' => 'required|string',
+            ]);
+
+            $result = $this->stripeService->capturePayment($validated['payment_intent_id']);
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'payment_intent' => $result['payment_intent'],
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'],
+            ], 500);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->validator->errors(),
+            ], $e->getCode() ?: 500);
+        }
+
     }
 
 }
