@@ -5,16 +5,8 @@ namespace App\Http\Controllers;
 use App\CancelledSubscriptions;
 use App\ClientPayments;
 use App\FailedTransactions;
-use App\Models\Billing;
-use App\Models\Bookings;
-use App\Models\CancelledBooking;
-use App\Package;
-use App\SubscriptionHistory;
-use App\Subscriptions;
 use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Log;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Exception\UnexpectedValueException;
 use Stripe\Webhook;
@@ -54,27 +46,7 @@ class StripeWebhookController extends Controller
     public function handleBookingRefund($request) {
         try {
             $customerId = $request->data['object']['customer'];
-            $billing = Billing::where(['stripe_customer_id' => $customerId])->first();
-            $booking = Bookings::where(['id' => $billing->booking_id])->first();
 
-            if($billing) {
-                $cancelledBooking = CancelledBooking::where(['booking_id' => $billing->booking_id])->first();
-                if($cancelledBooking) {
-                    $cancelledBooking->update([
-                        'status' => 1,
-                        'amount' => $request->data['object']['amount_refunded'] / 100,
-                        'stripe_response' => json_encode($request->data['object']),
-                        'refund_date' => Carbon::now(),
-                    ]);
-                    $booking->update(['status' => 3]);
-                    $billing->update(['invoice_status' => 3]);
-                    return response()->json(['message' => 'Booking refunded successfully']);
-                } else {
-                    return response()->json(['error' => 'Booking not found'], 404);
-                }
-            } else {
-                return response()->json(['error' => 'Booking not found'], 404);
-            }
         } catch (Exception $exception) {
             return $exception->getMessage();
         }

@@ -267,4 +267,34 @@ class StripeController extends Controller
         ], 500);
     }
 
+
+    public function refundPayment(Request $request)
+    {
+        $validated = $request->validate([
+            'payment_intent_id' => 'required|string',
+            'amount' => 'nullable|numeric|min:0.5', // Optional for partial refund
+        ]);
+
+        // Convert amount to cents
+        $amountInCents = $validated['amount'] ? $validated['amount'] * 100 : null;
+
+        $result = $this->stripeService->processRefund(
+            $validated['payment_intent_id'],
+            $validated['amount'] ?? null
+        );
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'refund' => $result['refund'],
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'error' => $result['error'],
+        ], 500);
+    }
+
+
 }

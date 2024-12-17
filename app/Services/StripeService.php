@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use Stripe\Exception\ApiErrorException;
 use Stripe\Stripe;
 use Stripe\Account;
 use Stripe\AccountLink;
 use Stripe\Customer;
 use Stripe\PaymentIntent;
+use Stripe\Refund;
 
 
 class StripeService
@@ -248,4 +250,44 @@ class StripeService
             ];
         }
     }
+
+
+    /**
+     * Cancel a payment intent.
+     *
+     * @param string $paymentIntentId
+     * @param int|null $amount
+     * @return array
+     */
+    public function processRefund(string $paymentIntentId, int $amount = null): array
+    {
+        try {
+
+            $paymentIntent = paymentIntent::retrieve($paymentIntentId);
+
+            // Get the last charge ID
+            $chargeId = $paymentIntent->latest_charge;
+
+            $refundParams = ['charge' => $chargeId];
+            if ($amount) {
+                $refundParams['amount'] = $amount * 100; // Amount in cents
+            }
+
+            // Create the refund via Stripe
+            $refund = Refund::create($refundParams);
+
+            return [
+                'success' => true,
+                'refund' => $refund,
+            ];
+        } catch (ApiErrorException $e) {
+            \Log::error('Stripe Refund Error: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
 }
