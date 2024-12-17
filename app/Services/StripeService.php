@@ -9,6 +9,8 @@ use Stripe\AccountLink;
 use Stripe\Customer;
 use Stripe\PaymentIntent;
 use Stripe\Refund;
+use Stripe\Charge;
+use Stripe\Transfer;
 
 
 class StripeService
@@ -266,19 +268,26 @@ class StripeService
             $paymentIntent = paymentIntent::retrieve($paymentIntentId);
 
             // Get the last charge ID
-            $chargeId = $paymentIntent->latest_charge;
+            $chargeId =   $paymentIntent->latest_charge;
+
+
+            $charge = Charge::retrieve($chargeId);
+            $transferId = $charge->transfer;
 
             $refundParams = ['charge' => $chargeId];
             if ($amount) {
                 $refundParams['amount'] = $amount * 100; // Amount in cents
             }
 
+            $reversalParams = ['amount' => $amount * 100]; // Amount in cents
+            $transferReversal = Transfer::createReversal($transferId, $reversalParams);
             // Create the refund via Stripe
             $refund = Refund::create($refundParams);
 
             return [
                 'success' => true,
                 'refund' => $refund,
+                'transfer_reversal' => $transferReversal,
             ];
         } catch (ApiErrorException $e) {
             \Log::error('Stripe Refund Error: ' . $e->getMessage());
