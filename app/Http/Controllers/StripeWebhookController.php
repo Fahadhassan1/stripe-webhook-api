@@ -33,8 +33,17 @@ class StripeWebhookController extends Controller
         }
 
         switch ($event->type) {
+            case 'payment_intent.succeeded':
+                $this->handlePaymentSuccess($event);
+                break;
             case 'charge.refunded':
-                $this->handleBookingRefund($request);
+                $this->handleBookingRefund($event);
+                break;
+            case 'payment_intent.payment_failed':
+                $this->handlePaymentFailure($event);
+                break;
+            case 'payout.paid':
+                $this->handlePayoutCompleted($event);
                 break;
             default:
                 return response()->json(['error' => 'Unhandled event type'], 400);
@@ -43,12 +52,64 @@ class StripeWebhookController extends Controller
 
     }
 
-    public function handleBookingRefund($request) {
+    public function handlePaymentSuccess(Event $event)
+    {
         try {
-            $customerId = $request->data['object']['customer'];
+            $paymentIntent = $event->data->object; // Contains a Stripe PaymentIntent
+            $paymentStatus = $paymentIntent->status; // Should be 'succeeded'
+
+            // Perform actions and update your DB according to your business logic
 
         } catch (Exception $exception) {
             return $exception->getMessage();
         }
+
+
     }
+
+    public function handleBookingRefund(Event $event)
+    {
+        try {
+            $charge = $event->data->object; // Contains a Stripe Charge object
+            $refundAmount = $charge->amount_refunded; // Amount refunded
+            $chargeId = $charge->id;
+
+            // Perform actions and update your DB according to your business logic
+
+        } catch (Exception $exception) {
+            return $exception->getMessage();
+        }
+
+    }
+
+    public function handlePaymentFailure(Event $event)
+    {
+        try {
+            $paymentIntent = $event->data->object; // Contains a Stripe PaymentIntent
+            $errorMessage = $paymentIntent->last_payment_error->message; // Failure reason
+
+
+            // Perform actions and update your DB according to your business logic
+
+        } catch (Exception $exception) {
+            return $exception->getMessage();
+        }
+
+    }
+
+    public function handlePayoutCompleted(Event $event)
+    {
+        try {
+            $payout = $event->data->object; // Contains a Stripe Payout object
+            $payoutAmount = $payout->amount; // Amount of payout
+            $payoutStatus = $payout->status; // Status of the payout
+
+            // Perform actions and update your DB according to your business logic
+
+        } catch (Exception $exception) {
+            return $exception->getMessage();
+        }
+
+    }
+
 }
