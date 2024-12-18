@@ -248,52 +248,107 @@ class StripeController extends Controller
      */
     public function cancelPayment(Request $request)
     {
-        $validated = $request->validate([
-            'payment_intent_id' => 'required|string',
-        ]);
-
-        $result = $this->stripeService->cancelPayment($validated['payment_intent_id']);
-
-        if ($result['success']) {
-            return response()->json([
-                'success' => true,
-                'payment_intent' => $result['payment_intent'],
+        try {
+            $validated = $request->validate([
+                'payment_intent_id' => 'required|string',
             ]);
-        }
 
-        return response()->json([
-            'success' => false,
-            'error' => $result['error'],
-        ], 500);
+            $result = $this->stripeService->cancelPayment($validated['payment_intent_id']);
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'payment_intent' => $result['payment_intent'],
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'],
+            ], 500);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->validator->errors(),
+            ], $e->getCode() ?: 500);
+        }
     }
 
 
     public function refundPayment(Request $request)
     {
-        $validated = $request->validate([
-            'payment_intent_id' => 'required|string',
-            'amount' => 'nullable|numeric|min:0.5', // Optional for partial refund
-        ]);
-
-        // Convert amount to cents
-        $amountInCents = $validated['amount'] ? $validated['amount'] * 100 : null;
-
-        $result = $this->stripeService->processRefund(
-            $validated['payment_intent_id'],
-            $validated['amount'] ?? null
-        );
-
-        if ($result['success']) {
-            return response()->json([
-                'success' => true,
-                'refund' => $result['refund'],
+        try {
+            $validated = $request->validate([
+                'payment_intent_id' => 'required|string',
+                'amount' => 'nullable|numeric|min:0.5', // Optional for partial refund
             ]);
-        }
 
-        return response()->json([
-            'success' => false,
-            'error' => $result['error'],
-        ], 500);
+            // Convert amount to cents
+            $amountInCents = $validated['amount'] ? $validated['amount'] * 100 : null;
+
+            $result = $this->stripeService->processRefund(
+                $validated['payment_intent_id'],
+                $validated['amount'] ?? null
+            );
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'refund' => $result['refund'],
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'],
+            ], 500);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->validator->errors(),
+            ], $e->getCode() ?: 500);
+        }
+    }
+
+
+    public function manualPayout(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'connected_account_id' => 'required|string',
+                'amount' => 'required|numeric|min:1',
+                'currency' => 'required|string|max:3',
+                'platform_fee' => 'nullable|numeric|min:0|max:100',
+            ]);
+
+            // Convert amount to cents
+            $result = $this->stripeService->manualPayout(
+                $validated['connected_account_id'],
+                $validated['amount'],
+                $validated['currency'],
+                $validated['platform_fee'] ?? 0.0
+            );
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'transfer' => $result['transfer'],
+                    'fee_deducted' => $result['fee_deducted'],
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => $result['error'],
+            ], 500);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->validator->errors(),
+            ], $e->getCode() ?: 500);
+        }
     }
 
 

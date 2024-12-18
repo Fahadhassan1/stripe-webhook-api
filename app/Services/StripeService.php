@@ -299,4 +299,38 @@ class StripeService
         }
     }
 
+
+    public function manualPayout(string $connectedAccountId, int $amount, string $currency, float $platformFee = 0.0): array
+    {
+        try {
+            // Calculate platform fee
+            $feeAmount = $amount * $platformFee / 100;
+            $transferAmount = $amount - $feeAmount;
+
+            // Create a Transfer to the connected account
+            $transfer = Transfer::create([
+                'amount' => $transferAmount * 100, // Amount in cents
+                'currency' => $currency,
+                'destination' => $connectedAccountId,
+//                'metadata' => [
+//                    'payment_intent_id' => $paymentIntentId,
+//                    'reason' => 'Manual payout for completed transaction',
+//                ]
+            ]);
+
+            return [
+                'success' => true,
+                'transfer' => $transfer,
+                'fee_deducted' => $feeAmount,
+            ];
+        } catch (\Exception $e) {
+            \Log::error('Stripe Manual Payout Error: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
 }

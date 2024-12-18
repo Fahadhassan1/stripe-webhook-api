@@ -32,7 +32,7 @@ Route::post('/stripe/charge-client', [StripeController::class, 'chargeClient']);
 Route::post('/stripe/capture-payment', [StripeController::class, 'capturePayment']);
 Route::post('/stripe/cancel-payment', [StripeController::class, 'cancelPayment']);
 Route::post('/stripe/refund-payment', [StripeController::class, 'refundPayment']);
-
+Route::post('/stripe/payout/manual', [StripeController::class, 'manualPayout']);
 
 
 
