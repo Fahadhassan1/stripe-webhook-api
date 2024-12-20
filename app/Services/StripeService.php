@@ -11,7 +11,8 @@ use Stripe\PaymentIntent;
 use Stripe\Refund;
 use Stripe\Charge;
 use Stripe\Transfer;
-
+use Stripe\BalanceTransaction;
+use Stripe\Payout;
 
 class StripeService
 {
@@ -333,4 +334,15 @@ class StripeService
         }
     }
 
+
+    public function getAllTransactionsByAccountId($accountId)
+    {
+        try {
+            $transactions = BalanceTransaction::all(['limit' => 100], ['stripe_account' => $accountId]);
+
+            return $transactions->data;
+        } catch (\Exception $e) {
+            throw new \Exception('Error fetching transactions: ' . $e->getMessage());
+        }
+    }
 }

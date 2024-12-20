@@ -352,4 +352,21 @@ class StripeController extends Controller
     }
 
 
+    public function getTransactionHistory($accountId)
+    {
+        try {
+
+            $transactions = $this->stripeService->getAllTransactionsByAccountId($accountId);
+
+            return response()->json([
+                'success' => true,
+                'data' => $transactions,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }
