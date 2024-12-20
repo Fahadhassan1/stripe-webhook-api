@@ -33,17 +33,18 @@ class StripeWebhookController extends Controller
         }
 
         switch ($event->type) {
+
             case 'payment_intent.succeeded':
-                $this->handlePaymentSuccess($event);
+                $this->handlePaymentSuccess($request);
                 break;
             case 'charge.refunded':
-                $this->handleBookingRefund($event);
+                $this->handleBookingRefund($request);
                 break;
             case 'payment_intent.payment_failed':
-                $this->handlePaymentFailure($event);
+                $this->handlePaymentFailure($request);
                 break;
             case 'payout.paid':
-                $this->handlePayoutCompleted($event);
+                $this->handlePayoutCompleted($request);
                 break;
             default:
                 return response()->json(['error' => 'Unhandled event type'], 400);
@@ -52,12 +53,12 @@ class StripeWebhookController extends Controller
 
     }
 
-    public function handlePaymentSuccess(Event $event)
+    public function handlePaymentSuccess($request)
     {
         try {
-            $paymentIntent = $event->data->object; // Contains a Stripe PaymentIntent
-            $paymentStatus = $paymentIntent->status; // Should be 'succeeded'
 
+            $paymentIntent = $request->data->object; // Contains a Stripe PaymentIntent
+            $paymentStatus = $paymentIntent->status; // Should be 'succeeded'
             // Perform actions and update your DB according to your business logic
 
         } catch (Exception $exception) {
@@ -67,10 +68,10 @@ class StripeWebhookController extends Controller
 
     }
 
-    public function handleBookingRefund(Event $event)
+    public function handleBookingRefund($request)
     {
         try {
-            $charge = $event->data->object; // Contains a Stripe Charge object
+            $charge = $request->data->object; // Contains a Stripe Charge object
             $refundAmount = $charge->amount_refunded; // Amount refunded
             $chargeId = $charge->id;
 
@@ -82,10 +83,10 @@ class StripeWebhookController extends Controller
 
     }
 
-    public function handlePaymentFailure(Event $event)
+    public function handlePaymentFailure($request)
     {
         try {
-            $paymentIntent = $event->data->object; // Contains a Stripe PaymentIntent
+            $paymentIntent = $request->data->object; // Contains a Stripe PaymentIntent
             $errorMessage = $paymentIntent->last_payment_error->message; // Failure reason
 
 
@@ -97,10 +98,10 @@ class StripeWebhookController extends Controller
 
     }
 
-    public function handlePayoutCompleted(Event $event)
+    public function handlePayoutCompleted($request)
     {
         try {
-            $payout = $event->data->object; // Contains a Stripe Payout object
+            $payout = $request->data->object; // Contains a Stripe Payout object
             $payoutAmount = $payout->amount; // Amount of payout
             $payoutStatus = $payout->status; // Status of the payout
 
