@@ -19,17 +19,44 @@ class StripeController extends Controller
         $this->stripeService = $stripeService;
     }
 
-    public function redirectToStripe()
+    public function redirectToStripe(Request $request)
     {
-        // you have to change this query according to authenticate user i'm just getting first user for testing purpose
-        $user = User::where('id', 1)->first();
+        try {
+            $validatedUser = $request->validate([
+                'email' => 'required|email',
+                'first_name' => 'required|string',
+                'last_name' => 'required|string',
+            ]);
 
-        $account = $this->stripeService->createAccount($user);
-        $accountLink = $this->stripeService->createAccountLink($account->id);
+            $account = $this->stripeService->createAccount($validatedUser);
+            $accountLink = $this->stripeService->createAccountLink($account->id);
 
-        return $accountLink->url;
+            return $accountLink->url;
+    //        return redirect()->away($accountLink->url);
 
-//        return redirect()->away($accountLink->url);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+
+            // Return validation errors as JSON
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->validator->errors(),
+            ], 422);
+
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+
+            // Handle Stripe API errors gracefully
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Stripe API error: ' . $e->getMessage(),
+            ], 500);
+        } catch (\Exception $e) {
+
+            // Catch any other general exceptions
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An unexpected error occurred: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function handleStripeCallback(Request $request, $accountId)

@@ -26,22 +26,34 @@ class StripeService
         return Account::create([
             'type' => 'express',
             'country' => 'GB',
-            'email' => $user->email,
+            'email' => $user['email'],
             'business_type' => 'individual',
             'individual' => [
-                'first_name' => $user->fname,
-                'last_name' => $user->lname,
+                'first_name' => $user['first_name'],
+                'last_name' => $user['last_name'],
+                // Include date of birth (required for identity verification)
+//                'dob' => [
+//                    'day' => $user['dob_day'],
+//                    'month' => $user['dob_month'],
+//                    'year' => $user['dob_year'],
+//                ],
             ],
+//            'address' => [  // Include address (often required)
+//                'line1' => $user['address_line1'],
+//                'city' => $user['city'],
+//                'postal_code' => $user['postal_code'],
+//                'state' => $user['state'], // For countries with states/provinces
+//            ],
             'capabilities' => [
                 'transfers' => ['requested' => true],
                 'card_payments' => ['requested' => true],
             ],
 
-//            'settings' =>  [
-//            "payouts" => [
-//                "schedule" => ["interval" =>"weekly"],  # Options: 'daily', 'weekly', 'monthly'
-//                ],
-//            ],
+            'settings' =>  [
+            "payouts" => [
+                "schedule" => ["interval" => "weekly",'weekly_anchor' => 'monday',],  # Options: 'daily', 'weekly', 'monthly'
+                ],
+            ],
         ]);
     }
 
