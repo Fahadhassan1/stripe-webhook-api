@@ -2,115 +2,100 @@
 
 namespace App\Http\Controllers;
 
-use App\CancelledSubscriptions;
-use App\ClientPayments;
-use App\FailedTransactions;
-use Exception;
 use Illuminate\Http\Request;
-use Stripe\Exception\SignatureVerificationException;
-use Stripe\Exception\UnexpectedValueException;
 use Stripe\Webhook;
-
+use App\Models\Transaction;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class StripeWebhookController extends Controller
 {
-    /**
-     * Handle a successful payment webhook from Stripe.
-     *
-     */
-
-    public function handleWebhooks(Request $request) {
+    public function handleWebhooks(Request $request)
+    {
 
         $payload = $request->getContent();
-        $signatureHeader = $request->header('Stripe-Signature');
-        $webhookSecret = env('STRIPE_WEBHOOK_SECRET');
+        $sig_header = $request->header('Stripe-Signature');
+        $endpoint_secret = env('STRIPE_WEBHOOK_SECRET'); 
+
         try {
-            $event = Webhook::constructEvent($payload, $signatureHeader, $webhookSecret);
-        } catch (UnexpectedValueException $exception) {
-            return response()->json(['error' => 'Invalid payload'], 400);
-        } catch (SignatureVerificationException $exception) {
-            return response()->json(['error' => 'Invalid signature'], 400);
+            $event = Webhook::constructEvent($payload, $sig_header, $endpoint_secret);
+
+            // Check the type of event
+            switch ($event->type) {
+                
+                case 'charge.succeeded':
+                    $charge = $event->data->object; // contains a Stripe Charge object
+                    $this->storeTransactionData($charge);
+                    break;
+                case 'charge.refunded':
+                    $charge = $event->data->object; 
+                    $this->storeRefundData($charge);
+                    break;    
+                
+                // Add more event types as needed
+                default:
+                    // Log or handle other events if necessary
+                    Log::info('Unhandled event type: ' . $event->type);
+                    break;
+            }
+
+            return response()->json(['status' => 'success']);
+        } catch (\Exception $e) {
+            // Handle the error
+            Log::error('Stripe Webhook Error: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 400);
         }
-
-        switch ($event->type) {
-
-            case 'payment_intent.succeeded':
-                $this->handlePaymentSuccess($request);
-                break;
-            case 'charge.refunded':
-                $this->handleBookingRefund($request);
-                break;
-            case 'payment_intent.payment_failed':
-                $this->handlePaymentFailure($request);
-                break;
-            case 'payout.paid':
-                $this->handlePayoutCompleted($request);
-                break;
-            default:
-                return response()->json(['error' => 'Unhandled event type'], 400);
-        }
-        return response()->json(['status' => 'success']);
-
     }
 
-    public function handlePaymentSuccess($request)
+    private function storeTransactionData($stripeObject)
     {
-        try {
+    
+        $transactionDate = Carbon::createFromTimestamp($stripeObject->created);
 
-            $paymentIntent = $request->data->object; // Contains a Stripe PaymentIntent
-            $paymentStatus = $paymentIntent->status; // Should be 'succeeded'
-            // Perform actions and update your DB according to your business logic
-
-        } catch (Exception $exception) {
-            return $exception->getMessage();
+        if (isset($stripeObject->data->transfer_data->destination)) {
+            $account = \Stripe\Account::retrieve($stripeObject->data->transfer_data->destinatio);
+            $stripeObject->on_behalf_of = $account->id;
+            $stripeObject->transfer_data->destination = $account->business_profile->name ?? null;
+            $stripeObject->transfer_data->destination_email  = $account->email ?? null;
         }
-
-
+        // Capture the relevant data from Stripe's response and store it in your database
+        Transaction::UpdateOrCreate(
+            ['transaction_id' => $stripeObject->id],
+        [
+            'transaction_id' => $stripeObject->id,
+            'amount' => $stripeObject->amount / 100,  
+            'stripe_fee' => $stripeObject->metadata->stripeFee / 100 ?? 0,
+            'platform_fee' => $stripeObject->metadata->serviceFee / 100 ?? 0,  
+            'captured' => $stripeObject->captured ?? false, 
+            'customer_id' => $stripeObject->customer ?? null,
+            'connect_account_id' => $stripeObject->on_behalf_of ?? null,
+            'connect_account_name' => $stripeObject->transfer_data->destination ?? null,
+            'connect_account_email' => $stripeObject->transfer_data->destination_email ?? null,
+            'session_url' => $stripeObject->metadata->sessionUrl ?? null,
+            'status' => $stripeObject->status == 'succeeded' ? 'paid' : null,
+            'metadata' => json_encode($stripeObject->metadata),
+            'json_data' => json_encode($stripeObject),
+            'transaction_date' => $transactionDate,
+            'created_at' => now(),
+        ]);
     }
 
-    public function handleBookingRefund($request)
+    public function storeRefundData($stripeObject)
     {
-        try {
-            $charge = $request->data->object; // Contains a Stripe Charge object
-            $refundAmount = $charge->amount_refunded; // Amount refunded
-            $chargeId = $charge->id;
+        $transactionDate = Carbon::createFromTimestamp($stripeObject->created);
 
-            // Perform actions and update your DB according to your business logic
-
-        } catch (Exception $exception) {
-            return $exception->getMessage();
-        }
-
-    }
-
-    public function handlePaymentFailure($request)
-    {
-        try {
-            $paymentIntent = $request->data->object; // Contains a Stripe PaymentIntent
-            $errorMessage = $paymentIntent->last_payment_error->message; // Failure reason
-
-
-            // Perform actions and update your DB according to your business logic
-
-        } catch (Exception $exception) {
-            return $exception->getMessage();
-        }
-
-    }
-
-    public function handlePayoutCompleted($request)
-    {
-        try {
-            $payout = $request->data->object; // Contains a Stripe Payout object
-            $payoutAmount = $payout->amount; // Amount of payout
-            $payoutStatus = $payout->status; // Status of the payout
-
-            // Perform actions and update your DB according to your business logic
-
-        } catch (Exception $exception) {
-            return $exception->getMessage();
-        }
-
-    }
-
+        Transaction::UpdateOrCreate(
+            ['transaction_id' => $stripeObject->id],
+            [
+                'refunded_amount' => $stripeObject->amount_refunded / 100,
+                'status' => $stripeObject->refunded ==  true ? 'refunded' : null,
+                'refunded_at' => $transactionDate,
+                'metadata' => json_encode($stripeObject->metadata),
+                'json_data' => json_encode($stripeObject),
+                'updated_at' => now(),
+                'transaction_date' => $transactionDate,
+            ]
+        );
+    }   
 }
+
