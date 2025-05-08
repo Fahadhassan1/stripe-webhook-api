@@ -46,7 +46,16 @@ class StripeController extends Controller
         });
 
 
-        return view('payments.index', compact('formattedData'));
+        // Return the data as JSON
+        return response()->json([
+            'data' => $formattedData,
+            'year' => $year,
+            'total_service_fee' => $data->sum('sum_stripe_fee'),
+            'total_fee' => $data->sum('sum_fee'),
+            'total_amount' => $data->sum('sum_amount'),
+            'total_count_id' => $data->sum('count_id'),
+        ]);
+        
     }
 
 
@@ -92,8 +101,7 @@ class StripeController extends Controller
                 if ($hasMore) {
                     $lastChargeId = end($stripeObject->data)->id;
                 }
-            }
-
+            }   
             return response()->json(['message' => 'Transaction data stored successfully'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
@@ -115,22 +123,30 @@ class StripeController extends Controller
         Transaction::updateOrCreate(
             ['transaction_id' => $stripeObject->id],
             [
-                'transaction_id' => $stripeObject->id,
-                'amount' => $stripeObject->amount / 100,
-                'stripe_fee' => $stripeObject->metadata->stripeFee / 100 ?? 0,
-                'platform_fee' => $stripeObject->metadata->serviceFee / 100 ?? 0,
+                'transaction_id' => $stripeObject->id ?? null,
+                'amount' => isset($stripeObject->amount) ? $stripeObject->amount / 100 : 0,
+                'stripe_fee' => isset($stripeObject->metadata->stripeFee) ? ($stripeObject->metadata->stripeFee / 100 ?? 0) : 0,
+                'platform_fee' => isset($stripeObject->metadata->serviceFee) ? ($stripeObject->metadata->serviceFee / 100 ?? 0) : 0,
                 'captured' => true,
-                'customer_id' => $stripeObject->customer,
-                'connect_account_id' => $stripeObject->metadata->connectAccountId,
-                'connect_account_name' => $stripeObject->metadata->connectAccountName,
-                'connect_account_email' => $stripeObject->metadata->connectAccountEmail,
-                'session_url' => $stripeObject->metadata->sessionUrl,
-                'status' => $status,
-                'refunded_amount' => $stripeObject->amount_refunded / 100 ?? 0,
-                'refunded_at' => $refundedAt,
-                'transaction_date' => \Carbon\Carbon::createFromTimestamp($stripeObject->created),
-                'metadata' => json_encode($stripeObject->metadata),
-                'json_data' => json_encode($stripeObject),
+                'customer_id' => $stripeObject->customer ?? null,
+                'connect_account_id' => $stripeObject->metadata->connectAccountId ?? null,
+                'connect_account_name' => $stripeObject->metadata->connectAccountName ?? null,
+                'connect_account_email' => $stripeObject->metadata->connectAccountEmail ?? null,
+                'session_url' => $stripeObject->metadata->sessionUrl ?? null,
+
+                'base_price' => isset($stripeObject->metadata->basePrice) ? ($stripeObject->metadata->basePrice / 100 ?? 0) : 0,
+                'session_instance_id' => $stripeObject->metadata->sessionInstanceId ?? null,
+                'session_owner_id' => $stripeObject->metadata->sessionOwnerId ?? null,
+                'session_owner_name' => $stripeObject->metadata->sessionOwnerName ?? null,
+                'session_for' => $stripeObject->metadata->for ?? null,
+                'userId' => $stripeObject->metadata->userId ?? null,
+
+                'status' => $status ?? null,
+                'refunded_amount' => isset($stripeObject->amount_refunded) ? $stripeObject->amount_refunded / 100 : 0,
+                'refunded_at' => $refundedAt ?? null,
+                'transaction_date' => isset($stripeObject->created) ? \Carbon\Carbon::createFromTimestamp($stripeObject->created) : null,
+                'metadata' => isset($stripeObject->metadata) ? json_encode($stripeObject->metadata) : null,
+                'json_data' => isset($stripeObject) ? json_encode($stripeObject) : null,
             ]
         );
     }

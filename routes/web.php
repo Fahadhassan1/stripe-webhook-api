@@ -18,13 +18,8 @@ use App\Http\Controllers\StripeController;
 
 
 
-
-// Stripe Views
-Route::get('/', [StripeController::class, 'showTransactionData'])->name('payments.index');
-Route::get('/payments/download/excel', [StripeController::class, 'downloadExcel'])->name('payments.downloadExcel');
-
-// get all transactions
-Route::get('/transactions/store', [StripeController::class, 'storeTransactionData'])->name('payments.storeTransactionData');
-
+Route::get('/', function () {
+    return view('welcome');
+});
 // Stripe WebHook
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhooks']);

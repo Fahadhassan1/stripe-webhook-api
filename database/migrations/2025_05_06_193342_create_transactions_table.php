@@ -31,6 +31,12 @@ class CreateTransactionsTable extends Migration
             $table->text('metadata')->nullable();
             $table->text('json_data')->nullable();
             $table->timestamp('transaction_date')->nullable();
+            $table->decimal('base_price', 10, 2)->nullable();
+            $table->string('session_instance_id')->nullable();
+            $table->string('session_owner_id')->nullable();
+            $table->string('session_owner_name')->nullable();
+            $table->string('session_for')->nullable();
+            $table->string('userId')->nullable();
             $table->timestamps();
         });
     }

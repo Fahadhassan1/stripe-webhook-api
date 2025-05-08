@@ -76,6 +76,13 @@ class StripeWebhookController extends Controller
             'metadata' => json_encode($stripeObject->metadata),
             'json_data' => json_encode($stripeObject),
             'transaction_date' => $transactionDate,
+            'base_price' => $stripeObject->metadata->basePrice / 100 ?? 0,
+            'session_instance_id' => $stripeObject->metadata->sessionInstanceId ?? null,
+            'session_owner_id' => $stripeObject->metadata->sessionOwnerId ?? null,
+            'session_owner_name' => $stripeObject->metadata->sessionOwnerName ?? null,
+            'session_for' => $stripeObject->metadata->for ?? null,
+            'userId' => $stripeObject->metadata->userId ?? null,
+            'refunded_amount' => $stripeObject->amount_refunded / 100 ?? 0,
             'created_at' => now(),
         ]);
     }

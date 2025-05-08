@@ -27,5 +27,11 @@ class Transaction extends Model
         'transaction_date',
         'metadata',
         'json_data',
+        'base_price',
+        'session_instance_id',
+        'session_owner_id',
+        'session_owner_name',
+        'session_for',
+        'userId',
     ];
 }

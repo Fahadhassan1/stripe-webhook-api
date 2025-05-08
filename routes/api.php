@@ -24,5 +24,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 
 
+// Stripe Views
+Route::get('/transactions/kpi/data', [StripeController::class, 'showTransactionData'])->name('payments.index');
+Route::get('/transactions/download/excel', [StripeController::class, 'downloadExcel'])->name('payments.downloadExcel');
 
+// get all transactions
+Route::get('/transactions/store', [StripeController::class, 'storeTransactionData'])->name('payments.storeTransactionData');
 
